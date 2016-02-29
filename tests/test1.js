@@ -12,9 +12,10 @@ var pinIN1 = 5;  // Stepper Red
 var pinIN2 = 6;  // Stepper Blue
 var pinIN3 = 13 ;// Stepper Green
 var pinIN4 = 19; // Stepper Black
-stepperWiringPi.setup(200, pinIN1, pinIN2, pinIN3, pinIN4);
-stepperWiringPi.setSpeed(60);
-stepperWiringPi.step(-200, function() {
+var motor1 = stepperWiringPi.setup(200, pinIN1, pinIN2, pinIN3, pinIN4);
+
+motor1.setSpeed(60);
+motor1.step(-200, function() {
   console.log("Stepping complete!");
 });
 
