@@ -7,12 +7,15 @@
 
 console.log("Starting stepper-wiringpi - test1");
 
-var stepperWiringpi = require("stepper-wiringpi");
+var stepperWiringPi = require("../src/stepper-wiringpi");
 var pinIN1 = 5;  // Stepper Red
 var pinIN2 = 6;  // Stepper Blue
 var pinIN3 = 13 ;// Stepper Green
 var pinIN4 = 19; // Stepper Black
 stepperWiringPi.setup(200, pinIN1, pinIN2, pinIN3, pinIN4);
-stepperWiringPi.step(200);
+stepperWiringPi.setSpeed(60);
+stepperWiringPi.step(-200, function() {
+  console.log("Stepping complete!");
+});
 
-console.log("Test complete.");
+console.log("Step requested submitted.");

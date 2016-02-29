@@ -20,6 +20,6 @@
     "url": "https://github.com/nkolban/node-stepper-wiringpi.git"
   },
   "author": "Neil Kolban",
-  "license": "BSD",
+  "license": "MIT",
   "readmeFilename": "README.md"
 }

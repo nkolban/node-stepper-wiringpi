@@ -12,7 +12,8 @@
  */
 
 
-var wpi = require('wiring-pi');
+const wpi = require('wiring-pi');
+
 wpi.setup('gpio');
 var thisModule = {};
 
@@ -90,7 +91,7 @@ exports.setup = function(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPi
   // Determine whether we are being called with 2,4 or 5 pins and setup accordingly.
   if (motorPin3 == undefined) {
     setup2Wire(numberOfSteps, motorPin1, motorPin2);
-  } else if (motorpin5 == undefined) {
+  } else if (motorPin5 == undefined) {
     setup4Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4);
   } else {
     setup5Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5);
@@ -129,9 +130,11 @@ exports.setSpeed = function(desiredRPM)
 
 /**
  * Moves the motor stepsToMove steps.  If the number is negative,
- * the motor moves in the reverse direction.
+ * the motor moves in the reverse direction.  The optional callback
+ * function will be invoked when the number of steps being asked to
+ * be moved have been moved.
  */
-exports.step = function(stepsToMove)
+exports.step = function(stepsToMove, callback)
 {
   var stepsLeft = Math.abs(stepsToMove);  // how many steps to take
 
@@ -144,6 +147,17 @@ exports.step = function(stepsToMove)
     clearInterval(thisModule.timerId);
   }
   
+  // Note: A question comes up on scheduling the first move immediately
+  // as opposed to a stepDelay later.  We should always pause at least
+  // one stepDelay even for the first step.  Consider what would happen
+  // if we didn't.  Imagine we issued a step(1) and then a step(-1)
+  // immediately on "completion" of the step(1).  We would imagine that
+  // we should end up exactly where we started (which is correct).  However
+  // if we don't wait at least one stepDelay then the call to step(-1) could
+  // happen before the completion of a stepDelay period and we would now be
+  // executing a -1 step even though the +1 step hadn't completed which
+  // would not allow us to end up at the same position as that at which
+  // we started.
   thisModule.timerId = setInterval(function()
   {
     // increment or decrement the step number,
@@ -172,6 +186,9 @@ exports.step = function(stepsToMove)
     if (stepsLeft == 0) {
       clearInterval(thisModule.timerId);
       thisModule.timerId = null;
+      if (callback != null) {
+        callback();
+      }
     } // End of stepsLeft == 0
   }, thisModule.stepDelay); // End of setInterval
 } // End of step
@@ -180,7 +197,8 @@ exports.step = function(stepsToMove)
 /*
  * Moves the motor forward or backwards.
  */
-exports.stepMotor = function(thisStep)
+exports.stepMotor = stepMotor;
+function stepMotor(thisStep)
 {
   if (thisModule.pinCount == 2) {
     switch (thisStep % 4) {
@@ -304,4 +322,5 @@ exports.stepMotor = function(thisStep)
         break;
     }
   }
-}
+} // End of stepMotor
+// End of file
