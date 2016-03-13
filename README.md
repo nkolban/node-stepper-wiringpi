@@ -10,7 +10,59 @@ $ npm install stepper-wiringpi
 ```
 
 ## Usage
-First we include the package with a call to `require` naming the package we wish to include.
+The class controls a stepper motor.  It has a number of core capabilities that are motor related.  First we have the
+notion of the rotation speed.  This is measured in rotations per minute (RPM) and is adjusted with the call to:
+
+```
+motor.setSpeed(60);
+```
+
+which would set the RPM of the motor to one rotation a second.  Setting the speed doesn't actually cause the motor to
+turn.  We would then call one of the direction functions which are:
+
+```
+motor.forward();
+```
+
+and
+
+```
+motor.backward();
+```
+
+Calling either of these starts the motor turning at the currently set speed.  If we change the speed while the motor is
+rotating, it will change the rate of rotation.
+
+If we wish to stop a motor from turning, we can call:
+
+```
+motor.stop();
+```
+
+We do not have to stop a motor before changing direction.  We can choose to call:
+```
+motor.forward();
+motor.backward();
+```
+
+There is a second mode of operation where we can specify an exact number of steps to turn and the motor will rotate
+those steps at the current speed.
+
+```
+motor.step(10);
+```
+
+will rotate the motor forwards 10 steps while
+
+```
+motor.step(-10);
+```
+
+the `step` function has an additional optional parameter which is a callback function that is invoked when the steps have been made.
+
+will rotate the motor backwards 10 steps.
+
+To mechanically use the package, first we include the package with a call to `require` naming the package we wish to include.
 
 ```
 var StepperWiringPi = require("stepper-wiringpi");
@@ -19,28 +71,24 @@ var StepperWiringPi = require("stepper-wiringpi");
 From here, we can create instances of a stepper motor driver using:
 
 ```
-var motor = StepperWiringPi.setup(numberOfSteps, pin1, pin2, pin3, pin4);
+var motor = StepperWiringPi.setup(stepsInRevolution, pin1, pin2, pin3, pin4);
 ```
 
-The object returned is an instance of a motor that can be driven.  To have the motor execute a turn of some steps
-we can call the `step` function which takes as a parameter the number of steps to rotate.  A positive value rotates
-in one direction while a negative value rotates in the opposite direction.  An additional optional parameter can be
-supplied which is a callback function that will be invoked when the movement of the steps has been completed.
-
-The speed of rotation can be specified in revolutions per minute (RPM) by calling the function `setSpeed`.  This should be
-set prior to asking for steps to be moved.
-
-For example:
-
-```
-motor.setSpeed(5);
-motor.step(5);
-```
-
-To adhere to the asynchronous nature of JavaScript, a call to `step` does not block waiting for the steps to complete. 
+The object returned is an instance of a motor that can be driven.
 
 To support multiple stepper motor physical types, the package supports 2, 4 and 5 wire interfaces.  The choice of which type is used
 is specified by the number of pins supplied in the `setup` call.
+
+In summary, the methods are:
+
+| Method                  | Description               |
+|-------------------------|---------------------------|
+| setSpeed(rpm)           | Set the speed of rotation |
+| forward()               | Start rotating forwards   |
+| backward()              | Start rotating backwards  |
+| stop()                  | Stop rotating             |
+| step(steps, [callback]) | Step the motor            |
+
 
 ## Dependencies
 This package depends upon:

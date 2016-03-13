@@ -15,7 +15,7 @@ var pinIN4 = 19; // Stepper Black
 var motor1 = stepperWiringPi.setup(200, pinIN1, pinIN2, pinIN3, pinIN4);
 
 motor1.setSpeed(60);
-motor1.step(-200, function() {
+motor1.step(-800, function() {
   console.log("Stepping complete!");
 });
 

@@ -15,8 +15,12 @@
 const wpi = require('wiring-pi');
 
 wpi.setup('gpio');
+var FORWARD = 1;
+var BACKWARD = -1;
+exports.FORWARD = FORWARD;
+exports.BACKWARD = BACKWARD;
 
-function setup2Wire(numberOfSteps, motorPin1, motorPin2)
+function setup2Wire(motorPin1, motorPin2)
 {
   // Pi pins for the motor control connection:
   this._motorPin1 = motorPin1;
@@ -36,7 +40,7 @@ function setup2Wire(numberOfSteps, motorPin1, motorPin2)
 } // End of setup2Wire
 
 
-function setup4Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4)
+function setup4Wire(motorPin1, motorPin2, motorPin3, motorPin4)
 { 
   // Pi pins for the motor control connection:
   this._motorPin1 = motorPin1;
@@ -58,7 +62,7 @@ function setup4Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4)
 } // End of setup4Wire
 
 
-function setup5Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5)
+function setup5Wire(motorPin1, motorPin2, motorPin3, motorPin4, motorPin5)
 { 
   // Pi pins for the motor control connection:
   this._motorPin1 = motorPin1;
@@ -75,29 +79,35 @@ function setup5Wire(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4, m
   wpi.pinMode(this._motorPin5, wpi.OUTPUT);
   
   // pin_count is used by the stepMotor() method:
-  this.pinCount = 5;
+  this._pinCount = 5;
 } // End of setup5Wire
 
 /**
  * Setup the object for usage.
  */
-exports.setup = function(numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5) {
+exports.setup = function(stepsPerRevolution, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5) {
   var context = {
+    // Export the functions
     step: step, // Function
     setSpeed: setSpeed, // Function
-    _stepDelay: 60*1000/numberOfSteps, // Set the default step delay to 1 rpm.
+    forward: forward, // Function
+    backward: backward, // Function
+    stop: stop, // Function
+    
+    _stepDelay: 60*1000/stepsPerRevolution, // Set the default step delay to 1 rpm.
     _stepNumber: 0, // Which step the motor is on.
     _direction: 0, // Motor direction.
     _timerId: null,
-    _numberOfSteps: numberOfSteps // Total number of steps for this motor.
+    _moveTimeoutId: null,
+    _stepsPerRevolution: stepsPerRevolution // Total number of steps for this motor.
   }
   // Determine whether we are being called with 2,4 or 5 pins and setup accordingly.
   if (motorPin3 == undefined) {
-    setup2Wire.call(context, numberOfSteps, motorPin1, motorPin2);
+    setup2Wire.call(context, motorPin1, motorPin2);
   } else if (motorPin5 == undefined) {
-    setup4Wire.call(context, numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4);
+    setup4Wire.call(context, motorPin1, motorPin2, motorPin3, motorPin4);
   } else {
-    setup5Wire.call(context, numberOfSteps, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5);
+    setup5Wire.call(context, motorPin1, motorPin2, motorPin3, motorPin4, motorPin5);
   }
   return context;
 } // End of setup
@@ -124,13 +134,45 @@ function setSpeed(desiredRPM)
   // 'numberOfSteps' property.  This tells us that to achieve 1 RPM, we would need
   // to move a step each interval.  As we increase the RPM, we will delay LESS
   // per step. 
-  var maxRPM = 60 * 1000 / this._numberOfSteps;
+  var maxRPM = 60 * 1000 / this._stepsPerRevolution;
   if (desiredRPM > maxRPM) {
     desiredRPM = maxRPM;
   }
   this._stepDelay = maxRPM / desiredRPM;
 } // End of setSpeed
 
+//PUBLIC: Set the motor to rotate forwards at the current set speed.
+function forward() {
+  stop.call(this);
+  move.call(this, FORWARD);
+}
+
+// PUBLIC: Set the motor to rotate backwards at the current set speed.
+function backward() {
+  stop.call(this);
+  move.call(this, BACKWARD);
+}
+
+// PRIVATE: Setup for continuous rotation at given speed.
+function move(direction) {
+  //console.log("move: %j", this);
+  if (direction == FORWARD) {
+    this._stepNumber++;
+  } else {
+    this._stepNumber--;
+  }
+  //console.log("Step number: %d", this._stepNumber);
+  stepMotor.call(this, this._stepNumber);
+  this._moveTimeoutId = setTimeout(move.bind(this), this._stepDelay, direction);
+}
+
+// PUBLIC: Stop any continuous movement.
+function stop() {
+  if (this._moveTimeout != null) {
+    clearTimeout(this._moveTimeout);
+    this._moveTimeout=null;
+  }
+}
 
 /**
  * Moves the motor stepsToMove steps.  If the number is negative,
@@ -171,25 +213,24 @@ function step(stepsToMove, callback)
   // we started.
   this._timerId = setInterval(function()
   {
-    // increment or decrement the step number,
-    // depending on direction:
+    // increment or decrement the step number, depending on direction:
     if (this._direction == 1)
     {
       this._stepNumber++;
-      if (this._stepNumber == this._numberOfSteps) {
+      if (this._stepNumber == this._stepsPerRevolution) {
         this._stepNumber = 0;
       }
     }
     else
     {
       if (this._stepNumber == 0) {
-        this._stepNumber = this._numberOfSteps;
+        this._stepNumber = this._stepsPerRevolution;
       }
       this._stepNumber--;
     }
 
     // step the motor to step number 0, 1, ..., {3 or 10}
-    stepMotor(this._stepNumber);
+    stepMotor.call(this, this._stepNumber);
     
     // Decrement the steps left to move.  If we have moved the correct number
     // of steps, cancel the timer as there is no need to move anymore.
@@ -210,7 +251,10 @@ function step(stepsToMove, callback)
  */
 function stepMotor(thisStep)
 {
-  if (this.pinCount == 2) {
+  thisStep = Math.abs(thisStep);
+  //console.log("Step: %d, mod4=%d, pinCount=%d", thisStep, thisStep%4, this._pinCount);
+
+  if (this._pinCount == 2) {
     switch (thisStep % 4) {
       case 0:  // 01
         wpi.digitalWrite(this._motorPin1, wpi.LOW);
@@ -230,7 +274,7 @@ function stepMotor(thisStep)
       break;
     }
   }
-  else if (this.pinCount == 4) {
+  else if (this._pinCount == 4) {
     switch (thisStep % 4) {
       case 0:  // 1010
         wpi.digitalWrite(this._motorPin1, wpi.HIGH);
@@ -258,7 +302,7 @@ function stepMotor(thisStep)
       break;
     }
   }
-  else if (this.pinCount == 5) {
+  else if (this._pinCount == 5) {
     switch (thisStep % 10) {
       case 0:  // 01101
         wpi.digitalWrite(this._motorPin1, wpi.LOW);
