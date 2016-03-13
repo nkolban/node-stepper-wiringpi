@@ -155,6 +155,7 @@ function backward() {
 
 // PRIVATE: Setup for continuous rotation at given speed.
 function move(direction) {
+  //console.log("move: direction: %d", direction);
   //console.log("move: %j", this);
   if (direction == FORWARD) {
     this._stepNumber++;
@@ -168,9 +169,9 @@ function move(direction) {
 
 // PUBLIC: Stop any continuous movement.
 function stop() {
-  if (this._moveTimeout != null) {
-    clearTimeout(this._moveTimeout);
-    this._moveTimeout=null;
+  if (this._moveTimeoutId != null) {
+    clearTimeout(this._moveTimeoutId);
+    this._moveTimeoutId = null;
   }
 }
 

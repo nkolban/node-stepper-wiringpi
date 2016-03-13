@@ -81,13 +81,13 @@ is specified by the number of pins supplied in the `setup` call.
 
 In summary, the methods are:
 
-| Method                  | Description               |
-|-------------------------|---------------------------|
-| setSpeed(rpm)           | Set the speed of rotation |
-| forward()               | Start rotating forwards   |
-| backward()              | Start rotating backwards  |
-| stop()                  | Stop rotating             |
-| step(steps, [callback]) | Step the motor            |
+| Method                    | Description               |
+|---------------------------|---------------------------|
+| `setSpeed(rpm)`           | Set the speed of rotation |
+| `forward()`               | Start rotating forwards   |
+| `backward()`              | Start rotating backwards  |
+| `stop()`                  | Stop rotating             |
+| `step(steps, [callback])` | Step the motor            |
 
 
 ## Dependencies
