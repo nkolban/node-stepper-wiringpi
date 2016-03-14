@@ -1,7 +1,7 @@
 /**
  * stepper-wiringpi
  * A module that moves a stepper motor for the Raspberry Pi based on the Wiring-Pi
- * module for GPIO access.
+ * module for GPIO access.  See the README.md file for usage details. 
  * 
  * Based on the design and implementation of the Arduino Stepper class found here:
  * 
@@ -12,13 +12,23 @@
  */
 
 
-const wpi = require('wiring-pi');
+var wpi = require('wiring-pi');
 
 wpi.setup('gpio');
+
+
+// Create definitions for the constants.
 var FORWARD = 1;
 var BACKWARD = -1;
+
+// Publish the constants.
 exports.FORWARD = FORWARD;
 exports.BACKWARD = BACKWARD;
+
+// A global used to identify motors for debugging purposes.  The first motor created
+// will have index 1, the next will have index 2 and so on.
+var motorIndex=1;
+
 
 function setup2Wire(motorPin1, motorPin2)
 {
@@ -93,14 +103,19 @@ exports.setup = function(stepsPerRevolution, motorPin1, motorPin2, motorPin3, mo
     forward: forward, // Function
     backward: backward, // Function
     stop: stop, // Function
+    halt: halt, // Function
     
+    _motorIndex: motorIndex, // The index of the motor used for debugging purposes.
     _stepDelay: 60*1000/stepsPerRevolution, // Set the default step delay to 1 rpm.
     _stepNumber: 0, // Which step the motor is on.
-    _direction: 0, // Motor direction.
-    _timerId: null,
-    _moveTimeoutId: null,
+    _direction: FORWARD, // Motor direction.
+    _timerId: null, // Interval object for stepping fixed number of steps.
+    _moveTimeoutId: null, // Timeout object for continuous rotation
     _stepsPerRevolution: stepsPerRevolution // Total number of steps for this motor.
   }
+  
+  motorIndex++; // Increment the global motorIndex count (used for debugging).
+  
   // Determine whether we are being called with 2,4 or 5 pins and setup accordingly.
   if (motorPin3 == undefined) {
     setup2Wire.call(context, motorPin1, motorPin2);
@@ -114,7 +129,8 @@ exports.setup = function(stepsPerRevolution, motorPin1, motorPin2, motorPin3, mo
 
 
 /**
- * Sets the speed in revs per minute
+ * PUBLIC:
+ * Sets the speed in revolutions per minute (RPM)
  */
 function setSpeed(desiredRPM)
 {
@@ -141,6 +157,7 @@ function setSpeed(desiredRPM)
   this._stepDelay = maxRPM / desiredRPM;
 } // End of setSpeed
 
+
 //PUBLIC: Set the motor to rotate forwards at the current set speed.
 function forward() {
   stop.call(this);
@@ -158,11 +175,11 @@ function move(direction) {
   //console.log("move: direction: %d", direction);
   //console.log("move: %j", this);
   if (direction == FORWARD) {
-    this._stepNumber++;
+    incrementStepNumber.call(this);
   } else {
-    this._stepNumber--;
+    decrementStepNumber.call(this);
   }
-  //console.log("Step number: %d", this._stepNumber);
+  console.log("Step number: %d", this._stepNumber);
   stepMotor.call(this, this._stepNumber);
   this._moveTimeoutId = setTimeout(move.bind(this), this._stepDelay, direction);
 }
@@ -176,7 +193,8 @@ function stop() {
 }
 
 /**
- * Moves the motor stepsToMove steps.  If the number is negative,
+ * PRIVATE:
+ * Moves the motor a fixed number of steps defined by `stepsToMove`.  If the number is negative,
  * the motor moves in the reverse direction.  The optional callback
  * function will be invoked when the number of steps being asked to
  * be moved have been moved.
@@ -193,13 +211,15 @@ function step(stepsToMove, callback)
   var stepsLeft = Math.abs(stepsToMove);  // how many steps to take
 
   // determine direction based on whether stepsToMove is + or -:
-  if (stepsToMove > 0) { this._direction = 1; }
-  if (stepsToMove < 0) { this._direction = 0; }
+  if (stepsToMove > 0) { this._direction = FORWARD; }
+  if (stepsToMove < 0) { this._direction = BACKWARD; }
   
   // If we should already be in the middle of a movement, cancel it.
   if (this._timerId != null) {
     clearInterval(this._timerId);
   }
+  
+  stop(); // If we are in a continuous rotation ... stop that too.
   
   // Note: A question comes up on scheduling the first move immediately
   // as opposed to a stepDelay later.  We should always pause at least
@@ -214,46 +234,74 @@ function step(stepsToMove, callback)
   // we started.
   this._timerId = setInterval(function()
   {
-    // increment or decrement the step number, depending on direction:
-    if (this._direction == 1)
-    {
-      this._stepNumber++;
-      if (this._stepNumber == this._stepsPerRevolution) {
-        this._stepNumber = 0;
-      }
-    }
-    else
-    {
-      if (this._stepNumber == 0) {
-        this._stepNumber = this._stepsPerRevolution;
-      }
-      this._stepNumber--;
-    }
-
-    // step the motor to step number 0, 1, ..., {3 or 10}
-    stepMotor.call(this, this._stepNumber);
-    
-    // Decrement the steps left to move.  If we have moved the correct number
-    // of steps, cancel the timer as there is no need to move anymore.
-    stepsLeft--;
+    // If we have moved the correct number of steps then cancel the timer and return
+    // after invoking a callback (if one has been supplied).
     if (stepsLeft <= 0) {
       clearInterval(this._timerId);
       this._timerId = null;
       if (callback != null) {
         callback();
       }
-    } // End of stepsLeft == 0
+      return;
+    } // End of stepsLeft <= 0
+    
+    // increment or decrement the step number, depending on direction:
+    if (this._direction == FORWARD)
+    {
+      incrementStepNumber.call(this);
+    }
+    else
+    {
+      decrementStepNumber.call(this);
+    }
+
+    // step the motor to step number 0, 1, ..., {3 or 10}
+    stepMotor.call(this, this._stepNumber);
+    
+    stepsLeft--; // Decrement the steps left to move. 
+
   }.bind(this), this._stepDelay); // End of setInterval
 } // End of step
 
 
+// PUBLIC:
+// Halt the motors by setting all the voltages to low.  There will now be no
+// force restricting the movement of the motors.
+function halt() {
+  wpi.digitalWrite(this._motorPin1, wpi.LOW);
+  wpi.digitalWrite(this._motorPin2, wpi.LOW);
+  if (this._pinCount == 2 || this._pintCount == 4) {
+    wpi.digitalWrite(this._motorPin3, wpi.LOW);
+    wpi.digitalWrite(this._motorPin4, wpi.LOW);
+  }
+  if (this._pinCount == 5) {
+    wpi.digitalWrite(this._motorPin5, wpi.LOW);
+  }
+} // End of halt
+
+
+function incrementStepNumber() {
+  this._stepNumber++;
+  if (this._stepNumber >= this._stepsPerRevolution) {
+    this._stepNumber = 0;
+  }
+}
+
+function decrementStepNumber() {
+  this._stepNumber--;
+  if (this._stepNumber < 0) {
+    this._stepNumber = this._stepsPerRevolution - 1;
+  }
+}
+
 /*
+ * PRIVATE:
  * Moves the motor forward or backwards.
  */
 function stepMotor(thisStep)
 {
   thisStep = Math.abs(thisStep);
-  //console.log("Step: %d, mod4=%d, pinCount=%d", thisStep, thisStep%4, this._pinCount);
+  console.log("Step: %d, \tmod4=%d", thisStep, thisStep%4);
 
   if (this._pinCount == 2) {
     switch (thisStep % 4) {

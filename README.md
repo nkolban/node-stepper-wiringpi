@@ -81,14 +81,15 @@ is specified by the number of pins supplied in the `setup` call.
 
 In summary, the methods are:
 
-| Method                    | Description               |
-|---------------------------|---------------------------|
-| `setSpeed(rpm)`           | Set the speed of rotation |
-| `forward()`               | Start rotating forwards   |
-| `backward()`              | Start rotating backwards  |
-| `stop()`                  | Stop rotating             |
-| `step(steps, [callback])` | Step the motor            |
-
+| Method                                                       | Description                |
+|--------------------------------------------------------------|----------------------------|
+| `setup(stepsInRevolution, pin1, pin2, [pin3, pin4, [pin5]])` | Setup the motor            |
+| `setSpeed(rpm)`                                              | Set the speed of rotation  |
+| `forward()`                                                  | Start rotating forwards    |
+| `backward()`                                                 | Start rotating backwards   |
+| `stop()`                                                     | Stop rotating              |
+| `step(steps, [callback])`                                    | Step the motor             |
+| `halt()`                                                     | Halt the motor (free turn) |
 
 ## Dependencies
 This package depends upon:
