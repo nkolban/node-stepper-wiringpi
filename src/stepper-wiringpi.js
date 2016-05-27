@@ -399,10 +399,10 @@ function stepMotor()
   }
   else if (this._pinCount == 4) {
     switch (thisStep % 4) {
-      case 0:  // 1010
+      case 0:  // 1100
         wpi.digitalWrite(this._motorPin1, wpi.HIGH);
-        wpi.digitalWrite(this._motorPin2, wpi.LOW);
-        wpi.digitalWrite(this._motorPin3, wpi.HIGH);
+        wpi.digitalWrite(this._motorPin2, wpi.HIGH);
+        wpi.digitalWrite(this._motorPin3, wpi.LOW);
         wpi.digitalWrite(this._motorPin4, wpi.LOW);
       break;
       case 1:  // 0110
@@ -411,13 +411,13 @@ function stepMotor()
         wpi.digitalWrite(this._motorPin3, wpi.HIGH);
         wpi.digitalWrite(this._motorPin4, wpi.LOW);
       break;
-      case 2:  //0101
+      case 2:  // 0011
         wpi.digitalWrite(this._motorPin1, wpi.LOW);
-        wpi.digitalWrite(this._motorPin2, wpi.HIGH);
-        wpi.digitalWrite(this._motorPin3, wpi.LOW);
+        wpi.digitalWrite(this._motorPin2, wpi.LOW);
+        wpi.digitalWrite(this._motorPin3, wpi.HIGH);
         wpi.digitalWrite(this._motorPin4, wpi.HIGH);
       break;
-      case 3:  //1001
+      case 3:  // 1001
         wpi.digitalWrite(this._motorPin1, wpi.HIGH);
         wpi.digitalWrite(this._motorPin2, wpi.LOW);
         wpi.digitalWrite(this._motorPin3, wpi.LOW);

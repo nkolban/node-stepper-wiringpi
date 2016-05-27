@@ -1,6 +1,6 @@
 {
   "name": "stepper-wiringpi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Module to control a stepper motor",
   "main": "src/stepper-wiringpi.js",
   "scripts": {
@@ -19,6 +19,8 @@
     "type": "git",
     "url": "https://github.com/nkolban/node-stepper-wiringpi.git"
   },
+  "os" : ["linux"],
+  "cpu" : ["arm"],
   "author": "Neil Kolban",
   "license": "MIT",
   "readmeFilename": "README.md"
