@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "wiring-pi": "^2.1.1"
+    "wiringpi-node": "^2.4.4"
   },
   "keywords": [
     "stepper",
